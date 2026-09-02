@@ -1,0 +1,34 @@
+# 变更记录
+
+> 任何标签名/别名/阈值改动,必须**同步**:本包 `规范.md` + `system-prompt.md` + Python `app/retrieval/intro_parser.py` + Java `IntroSoftSpecParser`。否则运营写的内容系统识别不了。
+
+## v3.2(2026-08-25)· 定位订正:只订正规范,不编造/补数据
+- 明确 skill 职责边界:把运营**已提供**的信息**订正成规范格式**(拆卖点/事实、合规改写、受控词归一、必填校验),**不编造/不替商家补数据**。
+- 提示词纠偏:去掉"主动追问补齐/替商家推断"倾向 → 缺内容(尤其必填)只**提示运营补原始信息**;仅当运营明确说是推断才标 `[推断]`;能力/契合理由证据须来自运营给的卖点/事实。
+- 同步:`SKILL.md`(加"职责边界"节)+ `system-prompt.md`(角色 + 职责边界 + 规则6/7 + 流程1/2)+ `README.md`。纯提示词措辞,解析器/契约字段不变。
+
+## v3.1(2026-08-25)· 能力/契合理由新增括号写法(运营友好)
+- `能力`、`契合理由` 除旧式 `名<-证据/理由` 外,新增等价的**括号写法**:`能力名(证据1；证据2)`、`人群或场景(理由)`;中英文括号均可,证据可省(只写能力名)。
+- 动机:`<-` 运营不便输入;括号更直觉,且与"事实(来源)"写法统一。
+- 兼容:两种写法并存,存量 `<-` 数据不受影响。
+- ✅ 已同步:`规范.md` + `system-prompt.md` + `examples.md` + `SKILL.md` + Python `intro_parser.py`(`_TRAILING_PAREN_RE`)+ Java `IntroSoftSpecParser`(`TRAILING_PAREN_RE`,新增单测 2 条)。
+- 切分口径不变:能力按**换行**分条(证据内 `；` 保留),契合理由按 `；`/换行分条(括号内理由勿含 `；`)。
+
+## v3(2026-08-20)· 意图/推荐增强字段(准确率导向)
+- 新增 5 标签:`需求:`/`解决问题:`(needs)、`用户会问:`/`搜索说法:`(query_phrases)、`不适合:`(not_for)、`差异化:`/`为什么选它:`(differentiators)、`契合理由:`(fit_reasons,`for<-reason`)。
+- 目标:提升"意图理解准 + 推荐准",非省 LLM。逐字段作用见 `规范.md §2.1`。
+- 落库:5 字段随认知卡进 `cognition` 列;`needs`/`query_phrases` **进 embed_text**(意图召回对齐),其余不进向量。
+- ✅ 代码已对齐:Java `IntroSoftSpecParser`(别名/拆列/embed_text/单测 9/9) + Python `intro_parser.py`(v2+v3 别名、行首锚点、认知卡进 attributes、单测 5/5)。两侧解析输出同构。
+- ⚠️ 补记:本次同时把 Python `intro_parser` 从 v1 直接补齐到 v2+v3(此前缺 定位/能力/允许表达),并将认知卡富结构由"顶层散落"收敛进 `attributes`(否则回 Java `Cpv` 反序列化会丢弃)。
+
+## v2(2026-08-19)· 严格版,对齐产品方案 §4.3 认知卡
+- 新增标签:`定位:`(positioning)、`能力:`(capabilities,`名<-证据`)、`允许表达:`(guardrails.allowed)。
+- 严格规则:标签**行首锚点**生效,值可跨多行;值内冒号/分号不误切。
+- 落库:结构化认知卡落 `t_product_attr`(新字段进 attributes JSON),原文留 `t_product_detail.ai_product_intro`。
+- 向量:`embed_text` 只取能力/事实侧,排除卖点(is_claim)/推断/guardrails。
+- 关联:Java 侧规则解析直落 spec `p_java_gns_node/docs/superpowers/specs/2026-08-19-intro-softspec-rule-parse-design.md`。
+
+## v1(初版)· 冒号软标签
+- 标签:核心卖点/关键事实/适用人群/适用场景/功效/推荐关键词/品牌/类目/禁用表达/常见问题。
+- 判定:N≥3 且命中核心卖点/关键事实。
+- 解析:Python `intro_parser.py`(全文匹配),LLM 兜底路径 S1。
